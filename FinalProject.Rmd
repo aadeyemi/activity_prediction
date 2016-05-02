@@ -3,6 +3,9 @@ title: "A prediction model to quantify how well an activity is performed"
 author: "Adeyemi Arogunmati"
 date: "May 1, 2016"
 output: 
+  md_document:
+    variant: markdown_github
+    toc: true
   html_document:
     toc: true
 ---
@@ -15,9 +18,12 @@ library(knitr)
 library(MASS)
 library(gridExtra)
 library(grid)
-library(caret)
+library(doMC)
+suppressWarnings(suppressMessages(library(caret)))
 suppressPackageStartupMessages(library(googleVis))
+suppressWarnings(suppressMessages(library(doParallel)))
 knitr::opts_chunk$set(echo = FALSE)
+cl <- makeCluster(detectCores())
 ```
 
 ## Executive Summary
@@ -116,24 +122,44 @@ A series of prediction models explained below are computed with the goal of choo
 
 ### 1: Random Forest
 For this model, I use the "rf" method of the train function in the caret package.
-```{r rf_model, echo=TRUE, cache=TRUE}
 
-fit.rf <- train(classe ~ ., method="rf", data=sub_training)
-print(fit.rf)
-
+```{r parallel_init1, echo=FALSE, results='hide', message=FALSE}
+#registerDoParallel(cl)
 ```
+
+```{r rf_model, echo=TRUE, cache=TRUE, results='hide', message=FALSE}
+fit.rf <- suppressMessages(train(classe ~ ., method="rf", data=sub_training))
+```
+
+```{r parallel_close1, echo=FALSE, results='hide', message=FALSE}
+#stopCluster(cl)
+```
+
+```{r rf_model2, echo=TRUE}
+print(fit.rf)
+```
+
 ### 2: LDA
 For this model, I use the "lda" method of the train function in the caret package.
 ```{r lda_model, echo=TRUE, cache=TRUE}
 
-fit.lda <- train(classe ~ ., method="lda", data=sub_training)
+fit.lda <- suppressMessages(train(classe ~ ., method="lda", data=sub_training))
 print(fit.lda)
 
 ```
 ### 3: Generalized Boosted Model
 For this model, I use the "gbm" method of the train function in the caret package.
+
+```{r parallel_init2, echo=FALSE, results='hide', message=FALSE}
+registerDoParallel(cl)
+```
+
 ```{r gbm_model, echo=TRUE, cache=TRUE, results='hide'}
-fit.gbm <- train(classe ~ ., method="gbm", data=sub_training)
+fit.gbm <- suppressMessages(train(classe ~ ., method="gbm", data=sub_training))
+```
+
+```{r parallel_close2, echo=FALSE, results='hide', message=FALSE}
+stopCluster(cl)
 ```
 
 ```{r gbm_model2, echo=TRUE}
@@ -197,9 +223,10 @@ pred.rf.testing
 summary(pred.rf.testing)
 ```
 
-The output of the above predictions are written to file using the function described below:
 
-```{r write_file, echo=TRUE}
+```{r write_file, echo=FALSE, results='hide'}
+# The output of the above predictions are written to file using the function described below:
+
 write_files = function(x){ 
     path <- "files/"
     for(i in 1:length(x)){
