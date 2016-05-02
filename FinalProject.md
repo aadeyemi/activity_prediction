@@ -1,3 +1,22 @@
+-   [Executive Summary](#executive-summary)
+-   [Background](#background)
+-   [Data](#data)
+-   [Data Loading](#data-loading)
+-   [Data Cleaning](#data-cleaning)
+-   [Cross Validation](#cross-validation)
+-   [Model Training](#model-training)
+    -   [1: Random Forest](#random-forest)
+    -   [2: LDA](#lda)
+    -   [3: Generalized Boosted Model](#generalized-boosted-model)
+-   [Prediction](#prediction)
+    -   [1: Random Forest](#random-forest-1)
+    -   [2: LDA](#lda-1)
+    -   [3: Generalized Boosted Model](#generalized-boosted-model-1)
+    -   [Prediction Summary](#prediction-summary)
+-   [Out-of-Sample Error](#out-of-sample-error)
+-   [Submission: Application of selected model to provided testing dataset](#submission-application-of-selected-model-to-provided-testing-dataset)
+-   [References](#references)
+
 Executive Summary
 -----------------
 
@@ -108,8 +127,6 @@ A series of prediction models explained below are computed with the goal of choo
 
 For this model, I use the "rf" method of the train function in the caret package.
 
-    ## Warning: package 'doParallel' was built under R version 3.2.5
-
 ``` r
 fit.rf <- suppressMessages(train(classe ~ ., method="rf", data=sub_training))
 ```
@@ -142,7 +159,7 @@ print(fit.rf)
 For this model, I use the "lda" method of the train function in the caret package.
 
 ``` r
-fit.lda <- train(classe ~ ., method="lda", data=sub_training)
+fit.lda <- suppressMessages(train(classe ~ ., method="lda", data=sub_training))
 print(fit.lda)
 ```
 
@@ -167,29 +184,8 @@ print(fit.lda)
 For this model, I use the "gbm" method of the train function in the caret package.
 
 ``` r
-fit.gbm <- train(classe ~ ., method="gbm", data=sub_training)
+fit.gbm <- suppressMessages(train(classe ~ ., method="gbm", data=sub_training))
 ```
-
-    ## Loading required package: gbm
-
-    ## Warning: package 'gbm' was built under R version 3.2.5
-
-    ## Loading required package: survival
-
-    ## 
-    ## Attaching package: 'survival'
-
-    ## The following object is masked from 'package:caret':
-    ## 
-    ##     cluster
-
-    ## Loading required package: splines
-
-    ## Loading required package: parallel
-
-    ## Loaded gbm 2.1.1
-
-    ## Loading required package: plyr
 
 ``` r
 print(fit.gbm)
