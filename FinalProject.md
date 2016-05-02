@@ -108,28 +108,11 @@ A series of prediction models explained below are computed with the goal of choo
 
 For this model, I use the "rf" method of the train function in the caret package.
 
+    ## Warning: package 'doParallel' was built under R version 3.2.5
+
 ``` r
-fit.rf <- train(classe ~ ., method="rf", data=sub_training)
+fit.rf <- suppressMessages(train(classe ~ ., method="rf", data=sub_training))
 ```
-
-    ## Loading required package: randomForest
-
-    ## Warning: package 'randomForest' was built under R version 3.2.5
-
-    ## randomForest 4.6-12
-
-    ## Type rfNews() to see new features/changes/bug fixes.
-
-    ## 
-    ## Attaching package: 'randomForest'
-
-    ## The following object is masked from 'package:gridExtra':
-    ## 
-    ##     combine
-
-    ## The following object is masked from 'package:ggplot2':
-    ## 
-    ##     margin
 
 ``` r
 print(fit.rf)
@@ -403,8 +386,6 @@ summary(pred.rf.testing)
 
     ## A B C D E 
     ## 7 8 1 1 3
-
-The output of the above predictions are written to file using the function described below:
 
 References
 ----------
