@@ -1,0 +1,218 @@
+---
+title: "A prediction model to quantify how well an activity is performed"
+author: "Adeyemi Arogunmati"
+date: "May 1, 2016"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+#setwd("C:/Work/DataScience/Projects/PracticalMachineLearning")
+library(rCharts)
+library(ggplot2)
+library(knitr)
+library(MASS)
+library(gridExtra)
+library(grid)
+library(caret)
+suppressPackageStartupMessages(library(googleVis))
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Executive Summary
+In this report, I present a prediction model to quantify how well an activity was performed. I use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants who were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+## Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+Participants were asked to perform one set of 10 repetition of the Unilateral Dumbbell Biceps Curl in five different fashions [1]: 
+
+- exactly according to the specifcation (Class A)
+- throwing the elbows to the front (Class B)
+- lifting the dumbbell only halfway (Class C) 
+- lowering the dumbbell only halfway (Class D) 
+- throwing the hips to the front (Class E) 
+
+Class A  corresponds  to  the  specifed  execution  of  the  exercise, while  the  other  4  classes  correspond  to  common  mistakes.
+
+## Data
+The training data for building this model was obtained from:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv>
+
+The test dataset set was obtained from:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv>
+
+These datasets were made available by <http://groupware.les.inf.puc-rio.br/har>.
+
+## Data Loading
+```{r getting_data, echo=TRUE}
+
+fileUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+fname <- "pml-training.csv"
+
+if (file.exists(fname)) {
+    pml_training <- read.csv(fname, na.strings=c("NA",""))
+} else { 
+    download.file(fileUrl, destfile = fname)
+    pml_training <- read.csv(fname, na.strings=c("NA",""))
+}  
+
+fileUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+fname <- "pml-testing.csv"
+
+if (file.exists(fname)) {
+    pml_testing <- read.csv(fname, na.strings=c("NA",""))
+} else { 
+    download.file(fileUrl, destfile = fname)
+    pml_testing <- read.csv(fname, na.strings=c("NA",""))
+} 
+
+
+```
+
+## Data Cleaning
+```{r cleaning_data, echo=TRUE}
+
+sumNA <- function(x) sum(is.na(x))
+numRows <- nrow(pml_training)
+
+# Remove columns with data that cannot be used in prediction. i.e. names, timestamps etc
+exclude_hdrs <- grep("name|timestamp|window|X", colnames(pml_training), value=FALSE) 
+training <- pml_training[,-exclude_hdrs]
+
+# Use variables with low NA ratio -- threshold is 90%
+ratioNA  <- apply(training, 2, sumNA)/numRows
+training <- training[,ratioNA < 0.1]
+
+training$classe = factor(training$classe)
+
+# examine the resulting data frame
+dim(training)
+
+# apply same to testing
+exclude_hdrs_testing <- grep("name|timestamp|window|X", colnames(pml_testing), value=FALSE) 
+testing <- pml_testing[,-exclude_hdrs_testing]
+testing <- testing[,ratioNA < 0.1]
+```
+
+## Cross Validation
+We eprform cross-validation by subsampling our training data into two subsets: a training subset, and a test subset. The training subset consist of 70% of the original training data while the test subset consists of the remaining 30% of the original training set.
+
+```{r cross_validation, echo=TRUE}
+
+set.seed(7311)
+
+train <- createDataPartition (y=training$classe, p = .70, list = FALSE)
+sub_training <- training[train,]
+sub_testing  <- training[-train,]
+
+```
+
+## Model Training
+A series of prediction models explained below are computed with the goal of choosing the best performer. 
+
+### 1: Random Forest
+For this model, I use the "rf" method of the train function in the caret package.
+```{r rf_model, echo=TRUE, cache=TRUE}
+
+fit.rf <- train(classe ~ ., method="rf", data=sub_training)
+print(fit.rf)
+
+```
+### 2: LDA
+For this model, I use the "lda" method of the train function in the caret package.
+```{r lda_model, echo=TRUE, cache=TRUE}
+
+fit.lda <- train(classe ~ ., method="lda", data=sub_training)
+print(fit.lda)
+
+```
+### 3: Generalized Boosted Model
+For this model, I use the "gbm" method of the train function in the caret package.
+```{r gbm_model, echo=TRUE, cache=TRUE, results='hide'}
+fit.gbm <- train(classe ~ ., method="gbm", data=sub_training)
+```
+
+```{r gbm_model2, echo=TRUE}
+print(fit.gbm)
+```
+
+## Prediction
+
+Resulting predictions are as follows:
+
+### 1: Random Forest
+```{r rf_model_pred, echo=TRUE, cache=TRUE}
+
+pred.rf  <- predict(fit.rf, newdata=sub_testing)
+confusionMatrix(pred.rf, sub_testing$classe)
+
+```
+### 2: LDA
+```{r lda_model_pred, echo=TRUE, cache=TRUE}
+
+pred.lda  <- predict(fit.lda, newdata=sub_testing)
+confusionMatrix(pred.lda, sub_testing$classe)
+
+```
+### 3: Generalized Boosted Model
+```{r gbm_model_pred, echo=TRUE, cache=TRUE}
+
+pred.gbm  <- predict(fit.gbm, newdata=sub_testing)
+confusionMatrix(pred.gbm, sub_testing$classe)
+
+```
+
+### Prediction Summary
+The best results of these prediction models were produced by the random forest method as shown in the confusion matrix output with an accuracy of 99.29%.
+
+```{r rf_plot, echo=TRUE}
+# random forest model plot
+plot(fit.rf, log = "y", main = "Accuracy of Random Forest Method", xlab = "Predictors", ylab = "Accuracy")
+```
+
+
+## Out-of-Sample Error
+We expect out of sample error to arise primarily from inaccuracies in class labeling. i.e. if an activity is not properly labeled, errors will be introduced.
+
+```{r oos_error, echo=TRUE}
+
+true_accuracy <- sum(pred.rf == sub_testing$classe)/length(pred.rf)
+oos_error  <- 1 - true_accuracy
+
+```
+
+The out-of-sample error is `r I(round(oos_error*100,2))`%.
+
+## Submission: Application of selected model to provided testing dataset 
+
+```{r rf_model_pred_testing, echo=TRUE, cache=TRUE}
+
+pred.rf.testing  <- predict(fit.rf, newdata=testing)
+pred.rf.testing
+
+summary(pred.rf.testing)
+```
+
+The output of the above predictions are written to file using the function described below:
+
+```{r write_file, echo=TRUE}
+write_files = function(x){ 
+    path <- "files/"
+    for(i in 1:length(x)){
+        filename = paste0("subject_",i,".txt")
+        write.table(x[i],file=file.path(path,filename),quote=FALSE,row.names=FALSE,col.names=FALSE)
+    }
+}
+
+write_files(pred.rf.testing)
+```
+
+
+## References
+
+[1] Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
